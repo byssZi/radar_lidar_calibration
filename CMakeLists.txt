@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(radar_lidar_static_calibration)
+project(radar_lidar_calibration)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 ## Compile as C++11, supported in ROS Kinetic and newer
@@ -250,24 +250,24 @@ link_directories(${JSONCPP_LIBRARY_DIRS})
 # catkin_add_nosetests(test)
 
 
-add_library(radar_calibration src/calibration.cpp)
-target_link_libraries(radar_calibration 
+add_library(radar_lidar_calibration src/calibration.cpp)
+target_link_libraries(radar_lidar_calibration 
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
   ${PCL_LIBRARIES}
   ${Boost_LIBRARIES}
 )
-add_dependencies(radar_calibration  ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_messages_cpp)
+add_dependencies(radar_lidar_calibration  ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_messages_cpp)
 
 
-add_executable(${PROJECT_NAME}_node src/radar_lidar_static_calibration_node.cpp)
+add_executable(${PROJECT_NAME}_node src/radar_lidar_calibration_node.cpp)
 target_link_libraries(${PROJECT_NAME}_node
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
   ${Boost_LIBRARIES}
   ${Pangolin_LIBRARIES}
   jsoncpp_lib
-  radar_calibration
+  radar_lidar_calibration
 )
 add_dependencies(${PROJECT_NAME}_node  ${PROJECT_NAME}_generate_messages_cpp)
 

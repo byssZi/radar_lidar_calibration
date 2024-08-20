@@ -1,6 +1,6 @@
 <launch>
 
-    <node pkg="radar_lidar_static_calibration" type="radar_lidar_static_calibration_node" name="static_calibration" output="screen" >
+    <node pkg="radar_lidar_calibration" type="radar_lidar_calibration_node" name="static_calibration" output="screen" >
         <param name="lidar_topic" value="/rslidar_points"/>
         <param name="radar_topic" value="/visualize_objects"/>
     </node>

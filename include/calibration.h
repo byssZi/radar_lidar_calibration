@@ -11,8 +11,8 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
-#include "radar_lidar_static_calibration/ObjectList.h"
-#include "radar_lidar_static_calibration/ClusterList.h"
+#include "radar_lidar_calibration/ObjectList.h"
+#include "radar_lidar_calibration/ClusterList.h"
 
 class RadarCalibration
 {

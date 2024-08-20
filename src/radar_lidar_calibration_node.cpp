@@ -401,8 +401,8 @@ void stop2calibration()
 
 int main(int argc, char **argv)
 {
-    ros::init(argc, argv, "radar_lidar_static_calibration");
-    pkg_loc = ros::package::getPath("radar_lidar_static_calibration");
+    ros::init(argc, argv, "radar_lidar_calibration");
+    pkg_loc = ros::package::getPath("radar_lidar_calibration");
 
     ros::NodeHandle nh;
     ros::NodeHandle private_nh("~");

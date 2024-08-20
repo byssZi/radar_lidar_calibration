@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>radar_lidar_static_calibration</name>
+  <name>radar_lidar_calibration</name>
   <version>0.0.0</version>
-  <description>The radar_lidar_static_calibration package</description>
+  <description>The radar_lidar_calibration package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->
