@@ -10,8 +10,6 @@ add_compile_options(-std=c++14)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  cv_bridge
-  message_filters
   message_generation
   pcl_ros
   roscpp
@@ -26,11 +24,9 @@ find_package(catkin REQUIRED COMPONENTS
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
-find_package(OpenCV REQUIRED)
 find_package(cmake_modules REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(PCL REQUIRED)
-find_package(Boost REQUIRED)
 find_package(Pangolin REQUIRED)
 find_package(jsoncpp REQUIRED)
 
@@ -136,7 +132,7 @@ generate_messages(
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES radar_lidar_static_calibration
-  CATKIN_DEPENDS cv_bridge message_filters message_generation message_runtime pcl_ros roscpp rospy sensor_msgs tf visualization_msgs geometry_msgs std_msgs nav_msgs
+  CATKIN_DEPENDS  message_generation message_runtime pcl_ros roscpp rospy sensor_msgs tf visualization_msgs geometry_msgs std_msgs nav_msgs
 #  DEPENDS system_lib
 )
 
@@ -150,16 +146,13 @@ include_directories(
   include
   ${catkin_INCLUDE_DIRS}
 )
-include_directories(include ${OpenCV_INCLUDE_DIRS})
 include_directories(include ${EIGEN3_INCLUDE_DIR})
-include_directories(include ${Boost_INCLUDE_DIR})
 include_directories(include ${JSONCPP_INCLUDE_DIRS})
 add_definitions(${EIGEN_DEFINITIONS})
 include_directories(include ${PCL_INCLUDE_DIRS})
 include_directories(include ${Pangolin_INCLUDE_DIRS})
 link_directories(${Pangolin_LIBRARY_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
-link_directories(${Boost_LIBRARY_DIRS})
 link_directories(${JSONCPP_LIBRARY_DIRS})
 
 
@@ -250,24 +243,12 @@ link_directories(${JSONCPP_LIBRARY_DIRS})
 # catkin_add_nosetests(test)
 
 
-add_library(radar_lidar_calibration src/calibration.cpp)
-target_link_libraries(radar_lidar_calibration 
-  ${catkin_LIBRARIES}
-  ${OpenCV_LIBRARIES}
-  ${PCL_LIBRARIES}
-  ${Boost_LIBRARIES}
-)
-add_dependencies(radar_lidar_calibration  ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_messages_cpp)
-
-
 add_executable(${PROJECT_NAME}_node src/radar_lidar_calibration_node.cpp)
 target_link_libraries(${PROJECT_NAME}_node
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
-  ${Boost_LIBRARIES}
   ${Pangolin_LIBRARIES}
   jsoncpp_lib
-  radar_lidar_calibration
 )
 add_dependencies(${PROJECT_NAME}_node  ${PROJECT_NAME}_generate_messages_cpp)
 

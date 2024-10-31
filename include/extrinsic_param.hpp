@@ -5,6 +5,7 @@
 #include <json/json.h>
 #include <stdio.h>
 #include <string>
+#include <Eigen/Core>
 
 void LoadExtrinsic(const std::string &filename, Eigen::Matrix4d &extrinsic) {
   Json::Reader reader;

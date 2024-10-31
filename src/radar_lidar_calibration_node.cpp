@@ -15,16 +15,9 @@
 #include <pcl/conversions.h>
 #include <pcl/registration/icp.h>
 
-#include <message_filters/subscriber.h>
-#include <message_filters/sync_policies/approximate_time.h>
-#include <message_filters/synchronizer.h>
-
 #include <termio.h>
 #include <stdio.h>
-#include <thread>
 
-#include <boost/filesystem.hpp>
-#include <opencv2/opencv.hpp>
 #include <pangolin/pangolin.h>
 #include <sys/ioctl.h>
 #include <termios.h>
@@ -34,13 +27,8 @@
 #include <string>
 
 #include "extrinsic_param.hpp"
-#include "calibration.h"
 #include <visualization_msgs/MarkerArray.h>
 
-#define THR_FAP 0.2 // thresthold of false alarm probability
-#define GL_GPU_MEM_INFO_CURRENT_AVAILABLE_MEM_NVX 0x9049
-#define MAX_RADAR_TIME_GAP 15 * 1e6
-using namespace message_filters;
 using namespace std;
 
 string pkg_loc;
@@ -50,6 +38,9 @@ bool start_radar_continue = false;
 
 ros::Subscriber lidar_sub;
 ros::Subscriber radar_sub;
+
+pcl::PointCloud<pcl::PointXYZI>::Ptr lidar_show(new pcl::PointCloud<pcl::PointXYZI>());
+pcl::PointCloud<pcl::PointXYZ>::Ptr radar_show(new pcl::PointCloud<pcl::PointXYZ>());
 
 // 获取键盘输入
 pangolin::GlBuffer *vertexBuffer_;
@@ -256,7 +247,6 @@ void ProcessSingleFrame(const pcl::PointCloud<pcl::PointXYZI>::Ptr cloudLidar,
   if (colorBuffer_ != nullptr)
     delete (colorBuffer_);
   int pointsNum = cloudLidar->points.size();
-  std::cout << "lidar point size: " << pointsNum << std::endl;
   pangolin::GlBuffer *vertexbuffer = new pangolin::GlBuffer(
       pangolin::GlArrayBuffer, pointsNum, GL_FLOAT, 3, GL_DYNAMIC_DRAW);
   pangolin::GlBuffer *colorbuffer = new pangolin::GlBuffer(
@@ -290,27 +280,13 @@ void ProcessSingleFrame(const pcl::PointCloud<pcl::PointXYZI>::Ptr cloudLidar,
 
   vertexBuffer_ = vertexbuffer;
   colorBuffer_ = colorbuffer;
-  std::cout << "Process lidar frame!\n";
 }
 
 
 void lidar_callback(const sensor_msgs::PointCloud2::ConstPtr& lidar_msg)
 {
-    pcl::PointCloud<pcl::PointXYZ>::Ptr lidar_show(new pcl::PointCloud<pcl::PointXYZ>());
+    lidar_show->clear();
     pcl::fromROSMsg(*lidar_msg, *lidar_show);
-    std::string lidar_name = "lidar_cloud";
-    RadarCalibration lidar_cali(lidar_show, lidar_name);
-    lidar_cali.showPoint();
-    if (sys_pause)
-    {
-        pcl::PointCloud<pcl::PointXYZI>::Ptr lidar_cloud(new pcl::PointCloud<pcl::PointXYZI>());
-        pcl::fromROSMsg(*lidar_msg, *lidar_cloud);
-        pcl::io::savePCDFileASCII(pkg_loc + "/data/lidar.pcd", *lidar_cloud);
-        std::cout << "Lidar PCD file saved!" << std::endl;
-        start_lidar_continue = true;
-        cv::destroyWindow(lidar_name);
-        lidar_sub.shutdown();
-    }
 }
 
 // void radar_callback(const radar_lidar_static_calibration::ObjectList::ConstPtr& radar_msg)
@@ -338,7 +314,7 @@ void lidar_callback(const sensor_msgs::PointCloud2::ConstPtr& lidar_msg)
 
 void radar_callback(const visualization_msgs::MarkerArray::ConstPtr& radar_msg)
 {
-    pcl::PointCloud<pcl::PointXYZ>::Ptr radar_show(new pcl::PointCloud<pcl::PointXYZ>());
+    radar_show->clear();
     for(auto object : radar_msg->markers){
         pcl::PointXYZ p;
         p.x = object.pose.position.x;
@@ -346,58 +322,9 @@ void radar_callback(const visualization_msgs::MarkerArray::ConstPtr& radar_msg)
         p.z = object.pose.position.z;
         radar_show->push_back(p);
     }
-    std::string radar_name = "radar_cloud";
-    RadarCalibration radar_cali(radar_show, radar_name);
-    radar_cali.showPoint();
-    if (sys_pause)
-    {
-        pcl::io::savePCDFileASCII(pkg_loc + "/data/radar.pcd", *radar_show);
-        std::cout << "Radar PCD file saved!" << std::endl;
-        start_radar_continue = true;
-        cv::destroyWindow(radar_name);
-        radar_sub.shutdown();
-    }
+    
 } 
 
-
-// 获取键盘输入
-int scanKeyboard()
-{
-    int in;
-    struct termios new_settings;
-    struct termios stored_settings;
-    tcgetattr(0, &stored_settings);
-    new_settings = stored_settings;
-    new_settings.c_lflag &= (~ICANON);
-    new_settings.c_cc[VTIME] = 0;
-    tcgetattr(0, &stored_settings);
-    new_settings.c_cc[VMIN] = 1;
-    tcsetattr(0, TCSANOW, &new_settings);
-
-    in = getchar();
-
-    tcsetattr(0, TCSANOW, &stored_settings);
-    return in;
-}
-
-void stop2calibration()
-{
-    while (ros::ok())
-    {
-        if (scanKeyboard() == 32)
-        {
-            sys_pause = true;
-            if (sys_pause)
-            {
-                std::cout << "Start to calibrate!" << std::endl;
-            }
-            else
-            {
-                std::cout << "Calibrate end!" << std::endl;
-            }
-        }
-    }
-}
 
 int main(int argc, char **argv)
 {
@@ -415,48 +342,7 @@ int main(int argc, char **argv)
     radar_sub = nh.subscribe(radar_topic, 1, radar_callback);
     lidar_sub = nh.subscribe(lidar_topic, 1, lidar_callback);
 
-    std::thread stop_to_calibrate(stop2calibration);
-    stop_to_calibrate.detach();
-    std::cout << "Press Space to capture lidar and radar pcd" << std::endl;
-
-    while (ros::ok())
-    {
-        if(start_lidar_continue && start_radar_continue){
-            break;
-        }
-        else{
-            ros::spinOnce();
-        }
-    }
-
-
-    std::cout << "Exiting program." << std::endl;
- 
-
-    string lidar_path = pkg_loc + "/data/lidar.pcd";
-    string radar_path = pkg_loc + "/data/radar.pcd";
     string extrinsic_json = pkg_loc + "/data/extrinsic.json";
-
-      // load lidar points
-    pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(
-        new pcl::PointCloud<pcl::PointXYZI>); // 创建点云（指针）
-    if (pcl::io::loadPCDFile<pcl::PointXYZI>(lidar_path, *cloud) ==
-        -1) //* 读入PCD格式的文件，如果文件不存在，返回-1
-    {
-        PCL_ERROR("Couldn't read lidar file \n");
-        return (-1);
-    }
-    pcl::PointCloud<pcl::PointXYZI> pcd = *cloud;
-          // load radar points
-    pcl::PointCloud<pcl::PointXYZ>::Ptr radar_cloud(
-        new pcl::PointCloud<pcl::PointXYZ>); // 创建点云（指针）
-    if (pcl::io::loadPCDFile<pcl::PointXYZ>(radar_path, *radar_cloud) ==
-        -1) //* 读入PCD格式的文件，如果文件不存在，返回-1
-    {
-        PCL_ERROR("Couldn't read radar file \n");
-        return (-1);
-    }
-    pcl::PointCloud<pcl::PointXYZ> radar_pcd = *radar_cloud;
 
     // load extrinsic
     Eigen::Matrix4d json_param;
@@ -526,13 +412,14 @@ int main(int argc, char **argv)
     mat_calib_box.push_back(minusZtrans);
 
     int frame_num = 0;
-    int lidar_point_size = cloud->points.size();
     pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_radar_cloud(
         new pcl::PointCloud<pcl::PointXYZ>());
-    ProcessSingleFrame(cloud, display_mode_);
 
     std::cout << "\n=>START\n";
     while (!pangolin::ShouldQuit()) {
+        ros::spinOnce();
+        int lidar_point_size = lidar_show->points.size();
+        ProcessSingleFrame(lidar_show, display_mode_);
         s_cam.Follow(Twc);
         d_cam.Activate(s_cam);
         glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
@@ -541,12 +428,12 @@ int main(int argc, char **argv)
         if (displayMode) {
         if (display_mode_ == false) {
             display_mode_ = true;
-            ProcessSingleFrame(cloud, display_mode_);
+            ProcessSingleFrame(lidar_show, display_mode_);
         }
         } else {
         if (display_mode_ == true) {
             display_mode_ = false;
-            ProcessSingleFrame(cloud, display_mode_);
+            ProcessSingleFrame(lidar_show, display_mode_);
         }
         }
 
@@ -576,7 +463,7 @@ int main(int argc, char **argv)
         }
 
         if (pangolin::Pushed(auto_calibrate)) {    
-        Eigen::Matrix4d matrix_trans = AutoCalibration(cloud, transformed_radar_cloud);
+        Eigen::Matrix4d matrix_trans = AutoCalibration(lidar_show, transformed_radar_cloud);
         calibration_matrix_ = matrix_trans * calibration_matrix_;
         cout << "\nTransfromation Matrix:\n" << calibration_matrix_ << std::endl;
         }
@@ -622,9 +509,9 @@ int main(int argc, char **argv)
         // draw radar lines
 
         transformed_radar_cloud->clear();
-        pcl::transformPointCloud(*radar_cloud, *transformed_radar_cloud,
+        pcl::transformPointCloud(*radar_show, *transformed_radar_cloud,
                                 calibration_matrix_);
-        for (int i = 0; i < radar_cloud->points.size(); i++) {
+        for (int i = 0; i < radar_show->points.size(); i++) {
         double x = transformed_radar_cloud->points[i].x;
         double y = transformed_radar_cloud->points[i].y;
         double z = transformed_radar_cloud->points[i].z;
